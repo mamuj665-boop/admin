@@ -28,7 +28,7 @@ export class AdminComponent implements OnInit {
   showAddCategory = false; catLoading = false; catError = ''; catSuccess = '';
   newCategory = { name: '', status: 'active' }; catImageFile: File | null = null;
 
-  private readonly API = 'http://localhost:5000/api';
+  private readonly API = 'https://shopverse-ef695ae54309.herokuapp.com/api';
   private get h() { return { Authorization: `Bearer ${localStorage.getItem('token')}` }; }
 
   constructor(private http: HttpClient) {}

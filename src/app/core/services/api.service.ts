@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  readonly BASE = 'http://localhost:5000/api';
+  readonly BASE = 'https://shopverse-ef695ae54309.herokuapp.com/api';
 
   constructor(private http: HttpClient) {}
 
