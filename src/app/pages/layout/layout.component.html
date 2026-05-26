@@ -1,0 +1,22 @@
+<div class="admin-layout">
+  <aside class="sidebar">
+    <div class="brand">⚡ Admin</div>
+    <nav>
+      <a routerLink="/pages/dashboard" routerLinkActive="active">🏠 Dashboard</a>
+      <a routerLink="/pages/categories" routerLinkActive="active">📂 Categories</a>
+      <a routerLink="/pages/products" routerLinkActive="active">📦 Products</a>
+      <a routerLink="/pages/orders" routerLinkActive="active">🛒 Orders</a>
+      <a routerLink="/pages/profile" routerLinkActive="active">👤 Profile</a>
+    </nav>
+    <button class="logout-btn" (click)="logout()">🚪 Logout</button>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <span>Welcome, {{ user?.name || 'Admin' }}</span>
+    </header>
+    <div class="content">
+      <router-outlet />
+    </div>
+  </div>
+</div>

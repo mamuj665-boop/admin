@@ -1,0 +1,184 @@
+<app-loader [loading]="loading" />
+
+<!-- Header -->
+<div class="page-header">
+  <div>
+    <h2>Orders</h2>
+    <p class="page-sub">{{ total }} total orders</p>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar">
+  <div class="filter-group">
+    <label>Order Status</label>
+    <select [(ngModel)]="filterStatus" (change)="applyFilters()">
+      <option value="">All Statuses</option>
+      <option *ngFor="let s of orderStatuses" [value]="s">{{ s | titlecase }}</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Payment Status</label>
+    <select [(ngModel)]="filterPayment" (change)="applyFilters()">
+      <option value="">All Payments</option>
+      <option *ngFor="let s of paymentStatuses" [value]="s">{{ s | titlecase }}</option>
+    </select>
+  </div>
+  <button class="btn-ghost" (click)="clearFilters()" *ngIf="filterStatus || filterPayment">
+    ✕ Clear
+  </button>
+</div>
+
+<!-- Table -->
+<div class="table-card">
+  <table class="data-table" *ngIf="orders.length">
+    <thead>
+      <tr>
+        <th>Order #</th>
+        <th>Customer</th>
+        <th>Items</th>
+        <th>Total</th>
+        <th>Order Status</th>
+        <th>Payment</th>
+        <th>Date</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let o of orders">
+        <td><span class="order-num">{{ o.orderNumber }}</span></td>
+        <td>
+          <div class="customer-cell">
+            <span class="fw-500">{{ o.userId?.name ?? '—' }}</span>
+            <span class="text-muted">{{ o.userId?.email }}</span>
+          </div>
+        </td>
+        <td>{{ o.orderItems?.length ?? 0 }} item(s)</td>
+        <td><span class="price-tag">Rs. {{ o.totalAmount | number }}</span></td>
+        <td>
+          <select class="status-select" [ngModel]="o.orderStatus"
+            (ngModelChange)="updateStatus(o._id, $event)"
+            [disabled]="updatingId === o._id"
+            [class]="'status-select ' + orderStatusColor(o.orderStatus)">
+            <option *ngFor="let s of orderStatuses" [value]="s">{{ s | titlecase }}</option>
+          </select>
+        </td>
+        <td><span [class]="'badge ' + paymentStatusColor(o.paymentStatus)">{{ o.paymentStatus | titlecase }}</span></td>
+        <td class="text-muted">{{ o.createdAt | date:'dd MMM, y' }}</td>
+        <td>
+          <button class="btn-icon btn-edit" (click)="openDetail(o._id)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+            View
+          </button>
+          <button class="btn-icon btn-refund"
+            *ngIf="o.paymentStatus === 'paid'"
+            [disabled]="refundingId === o._id"
+            (click)="refund(o._id)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+            {{ refundingId === o._id ? '...' : 'Refund' }}
+          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="empty-state" *ngIf="!orders.length && !loading">
+    <span>🛒</span>
+    <p>No orders found.</p>
+  </div>
+</div>
+
+<!-- Pagination -->
+<div class="pagination" *ngIf="pages > 1">
+  <button class="pg-btn" (click)="goPage(page - 1)" [disabled]="page === 1">‹</button>
+  <button class="pg-btn" *ngFor="let p of pageNumbers"
+    [class.active]="p === page" (click)="goPage(p)">{{ p }}</button>
+  <button class="pg-btn" (click)="goPage(page + 1)" [disabled]="page === pages">›</button>
+  <span class="pg-info">Page {{ page }} of {{ pages }}</span>
+</div>
+
+<!-- Detail Modal Backdrop -->
+<div class="modal-backdrop" *ngIf="showDetail" (click)="closeDetail()"></div>
+
+<!-- Detail Modal -->
+<div class="modal modal-lg" *ngIf="showDetail">
+  <div class="modal-header">
+    <h3>Order Detail</h3>
+    <button class="modal-close" (click)="closeDetail()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <div class="modal-body" *ngIf="detailLoading">
+    <div class="detail-loading">Loading...</div>
+  </div>
+
+  <div class="modal-body" *ngIf="!detailLoading && detailOrder">
+
+    <!-- Order Meta -->
+    <div class="detail-meta">
+      <div class="detail-meta-item">
+        <span class="meta-label">Order Number</span>
+        <span class="meta-value fw-500">{{ detailOrder.orderNumber }}</span>
+      </div>
+      <div class="detail-meta-item">
+        <span class="meta-label">Date</span>
+        <span class="meta-value">{{ detailOrder.createdAt | date:'dd MMM yyyy, hh:mm a' }}</span>
+      </div>
+      <div class="detail-meta-item">
+        <span class="meta-label">Customer</span>
+        <span class="meta-value">{{ detailOrder.userId?.name }} · {{ detailOrder.userId?.email }}</span>
+      </div>
+      <div class="detail-meta-item">
+        <span class="meta-label">Total Amount</span>
+        <span class="meta-value price-tag">Rs. {{ detailOrder.totalAmount | number }}</span>
+      </div>
+    </div>
+
+    <!-- Status Row -->
+    <div class="detail-status-row">
+      <div class="field">
+        <label>Order Status</label>
+        <select class="status-select" [ngModel]="detailOrder.orderStatus"
+          (ngModelChange)="updateStatus(detailOrder._id, $event)"
+          [disabled]="updatingId === detailOrder._id"
+          [class]="'status-select ' + orderStatusColor(detailOrder.orderStatus)">
+          <option *ngFor="let s of orderStatuses" [value]="s">{{ s | titlecase }}</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Payment Status</label>
+        <div style="display:flex;align-items:center;gap:.75rem;">
+          <span [class]="'badge ' + paymentStatusColor(detailOrder.paymentStatus)">
+            {{ detailOrder.paymentStatus | titlecase }}
+          </span>
+          <button class="btn-icon btn-refund"
+            *ngIf="detailOrder.paymentStatus === 'paid'"
+            [disabled]="refundingId === detailOrder._id"
+            (click)="refund(detailOrder._id)">
+            {{ refundingId === detailOrder._id ? 'Processing...' : '↩ Refund' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Items -->
+    <h4 class="section-title">Order Items</h4>
+    <div class="order-items-list">
+      <div class="order-item" *ngFor="let item of detailOrder.orderItems">
+        <img *ngIf="item.product?.images?.[0]" [src]="item.product.images[0]" />
+        <div class="img-placeholder" *ngIf="!item.product?.images?.[0]">📦</div>
+        <div class="order-item-info">
+          <span class="fw-500">{{ item.title }}</span>
+          <span class="text-muted">Qty: {{ item.quantity }} × Rs. {{ item.price | number }}</span>
+        </div>
+        <span class="price-tag">Rs. {{ (item.quantity * item.price) | number }}</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn-ghost" (click)="closeDetail()">Close</button>
+  </div>
+</div>

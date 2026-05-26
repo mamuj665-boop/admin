@@ -1,0 +1,101 @@
+<app-loader [loading]="loading" />
+
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h2>Categories</h2>
+    <p class="page-sub">{{ categories.length }} total categories</p>
+  </div>
+  <button class="btn-primary" (click)="openModal()">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+    Add Category
+  </button>
+</div>
+
+<!-- Table -->
+<div class="table-card">
+  <table class="data-table" *ngIf="categories.length">
+    <thead>
+      <tr>
+        <th>Image</th>
+        <th>Name</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let c of categories">
+        <td>
+          <img *ngIf="c.image" [src]="c.image" width="42" height="42" style="border-radius:8px;object-fit:cover;" />
+          <div *ngIf="!c.image" class="img-placeholder">📂</div>
+        </td>
+        <td><span class="fw-500">{{ c.name }}</span></td>
+        <td><span [class]="'badge ' + c.status">{{ c.status }}</span></td>
+        <td>
+          <button class="btn-icon btn-danger" (click)="delete(c._id)" title="Delete">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            Delete
+          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="empty-state" *ngIf="!categories.length && !loading">
+    <span>📂</span>
+    <p>No categories yet. Add your first one!</p>
+  </div>
+</div>
+
+<!-- Modal Backdrop -->
+<div class="modal-backdrop" *ngIf="showModal" (click)="closeModal()"></div>
+
+<!-- Modal -->
+<div class="modal" *ngIf="showModal">
+  <div class="modal-header">
+    <h3>Add Category</h3>
+    <button class="modal-close" (click)="closeModal()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <!-- Image Upload -->
+    <div class="img-upload-box" (click)="fileInput.click()">
+      <img *ngIf="previewUrl" [src]="previewUrl" class="img-preview" />
+      <div *ngIf="!previewUrl" class="img-upload-placeholder">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <span>Click to upload image</span>
+      </div>
+      <input #fileInput type="file" accept="image/*" hidden (change)="onImage($event)" />
+    </div>
+
+    <div class="field">
+      <label>Category Name <span class="required">*</span></label>
+      <input [(ngModel)]="form.name" placeholder="e.g. Electronics" [class.input-error]="submitted && !form.name" />
+      <span class="err-msg" *ngIf="submitted && !form.name">Name is required</span>
+    </div>
+
+    <div class="field">
+      <label>Status</label>
+      <div class="radio-group">
+        <label class="radio-option" [class.selected]="form.status === 'active'">
+          <input type="radio" [(ngModel)]="form.status" value="active" /> Active
+        </label>
+        <label class="radio-option" [class.selected]="form.status === 'inactive'">
+          <input type="radio" [(ngModel)]="form.status" value="inactive" /> Inactive
+        </label>
+      </div>
+    </div>
+
+    <div class="alert alert-error" *ngIf="error">⚠️ {{ error }}</div>
+    <div class="alert alert-success" *ngIf="success">✅ {{ success }}</div>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn-ghost" (click)="closeModal()">Cancel</button>
+    <button class="btn-primary" (click)="submit()" [disabled]="saving">
+      <span class="btn-spinner" *ngIf="saving"></span>
+      <span *ngIf="!saving">Save Category</span>
+    </button>
+  </div>
+</div>

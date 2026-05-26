@@ -1,0 +1,190 @@
+<!-- Login -->
+<div class="login-overlay" *ngIf="!isLoggedIn">
+  <div class="login-box">
+    <div class="login-logo">S</div>
+    <h2>Admin Login</h2>
+    <div class="error-msg" *ngIf="error">⚠️ {{error}}</div>
+    <form (ngSubmit)="login()">
+      <div class="form-group"><label>Email</label><input type="email" [(ngModel)]="email" name="email" placeholder="admin@store.com" /></div>
+      <div class="form-group"><label>Password</label><input type="password" [(ngModel)]="password" name="password" placeholder="••••••••" /></div>
+      <button type="submit" class="btn btn-primary btn-block" [disabled]="loading">{{loading ? 'Verifying...' : '🔐 Login'}}</button>
+    </form>
+  </div>
+</div>
+
+<!-- Dashboard -->
+<div class="admin-layout" *ngIf="isLoggedIn">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-icon">S</div><span>Admin Panel</span></div>
+    <nav>
+      <button [class.active]="activeTab==='dashboard'" (click)="activeTab='dashboard'">📊 Dashboard</button>
+      <button [class.active]="activeTab==='products'" (click)="activeTab='products'">📦 Products</button>
+      <button [class.active]="activeTab==='categories'" (click)="activeTab='categories'">🏷️ Categories</button>
+      <hr />
+      <button (click)="logout()" class="logout-btn">🚪 Logout</button>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="top-bar">
+      <h1>{{activeTab | titlecase}}</h1>
+      <div class="top-actions">
+        <button class="btn btn-primary btn-sm" *ngIf="activeTab==='products'" (click)="showAddProduct=true">+ Add Product</button>
+        <button class="btn btn-primary btn-sm" *ngIf="activeTab==='categories'" (click)="showAddCategory=true">+ Add Category</button>
+        <span class="admin-badge">👤 Admin</span>
+      </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div *ngIf="activeTab==='dashboard'">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon">📦</div><div><div class="stat-val">{{apiProducts.length}}</div><div class="stat-label">Products</div></div></div>
+        <div class="stat-card"><div class="stat-icon">🏷️</div><div><div class="stat-val">{{categories.length}}</div><div class="stat-label">Categories</div></div></div>
+        <div class="stat-card"><div class="stat-icon">✅</div><div><div class="stat-val">{{apiProducts.length}}</div><div class="stat-label">Active Products</div></div></div>
+        <div class="stat-card"><div class="stat-icon">📉</div><div><div class="stat-val">{{categories.length}}</div><div class="stat-label">Categories</div></div></div>
+      </div>
+    </div>
+
+    <!-- Products -->
+    <div *ngIf="activeTab==='products'">
+      <div class="card">
+        <div class="card-header"><h3>All Products ({{apiProducts.length}})</h3></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Image</th><th>Title</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let p of apiProducts">
+                <td><img *ngIf="p.images?.length" [src]="p.images[0]" class="tbl-img" /><span *ngIf="!p.images?.length">—</span></td>
+                <td><strong>{{p.title}}</strong><small>{{p.SKU}}</small></td>
+                <td>{{p.categoryId?.name ?? '—'}}</td>
+                <td>AED {{p.price | number:'1.2-2'}}</td>
+                <td>{{p.stock}}</td>
+                <td><span class="badge" [class.active]="p.isActive" [class.inactive]="!p.isActive">{{p.isActive ? 'Active' : 'Inactive'}}</span></td>
+                <td>
+                  <button class="btn btn-sm btn-secondary" (click)="openEditProduct(p)">Edit</button>
+                  <button class="btn btn-sm btn-danger" (click)="deleteProduct(p._id)">Del</button>
+                </td>
+              </tr>
+              <tr *ngIf="!apiProducts.length"><td colspan="7" class="empty">No products.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Categories -->
+    <div *ngIf="activeTab==='categories'">
+      <div class="card">
+        <div class="card-header"><h3>All Categories ({{categories.length}})</h3></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Image</th><th>Name</th><th>Slug</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let c of categories">
+                <td><img *ngIf="c.image" [src]="c.image" class="tbl-img" /><span *ngIf="!c.image">—</span></td>
+                <td><strong>{{c.name}}</strong></td>
+                <td><code>{{c.slug}}</code></td>
+                <td><span class="badge" [class.active]="c.status==='active'" [class.inactive]="c.status!=='active'">{{c.status}}</span></td>
+                <td><button class="btn btn-sm btn-danger" (click)="deleteCategory(c._id)">Del</button></td>
+              </tr>
+              <tr *ngIf="!categories.length"><td colspan="5" class="empty">No categories.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal-overlay" *ngIf="showAddProduct" (click)="showAddProduct=false">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-header"><h3>Add Product</h3><button (click)="showAddProduct=false">✕</button></div>
+    <div class="error-msg" *ngIf="addError">⚠️ {{addError}}</div>
+    <div class="success-msg" *ngIf="addSuccess">✅ {{addSuccess}}</div>
+    <form (ngSubmit)="submitProduct()">
+      <div class="modal-grid">
+        <div class="form-group"><label>Title *</label><input type="text" [(ngModel)]="newProduct.title" name="title" required /></div>
+        <div class="form-group"><label>Category *</label>
+          <select [(ngModel)]="newProduct.categoryId" name="categoryId" required>
+            <option value="" disabled>Select</option>
+            <option *ngFor="let c of categories" [value]="c._id">{{c.name}}</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Price *</label><input type="number" [(ngModel)]="newProduct.price" name="price" min="0" required /></div>
+        <div class="form-group"><label>Tax %</label><input type="number" [(ngModel)]="newProduct.taxPercentage" name="tax" min="0" /></div>
+        <div class="form-group"><label>Stock</label><input type="number" [(ngModel)]="newProduct.stock" name="stock" min="0" /></div>
+        <div class="form-group"><label>SKU</label><input type="text" [(ngModel)]="newProduct.SKU" name="sku" /></div>
+        <div class="form-group"><label>Status</label>
+          <select [(ngModel)]="newProduct.isActive" name="isActive">
+            <option [ngValue]="true">Active</option><option [ngValue]="false">Inactive</option>
+          </select>
+        </div>
+        <div class="form-group full"><label>Description</label><textarea [(ngModel)]="newProduct.description" name="desc" rows="3"></textarea></div>
+        <div class="form-group full"><label>Images (up to 5)</label><input type="file" accept="image/*" multiple (change)="onProductImages($event)" /></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="showAddProduct=false">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="addLoading">{{addLoading ? 'Saving...' : 'Save'}}</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Product Modal -->
+<div class="modal-overlay" *ngIf="showEditProduct" (click)="showEditProduct=false">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-header"><h3>Edit Product</h3><button (click)="showEditProduct=false">✕</button></div>
+    <div class="error-msg" *ngIf="editError">⚠️ {{editError}}</div>
+    <div class="success-msg" *ngIf="editSuccess">✅ {{editSuccess}}</div>
+    <form (ngSubmit)="submitEditProduct()">
+      <div class="modal-grid">
+        <div class="form-group"><label>Title *</label><input type="text" [(ngModel)]="editProduct.title" name="eTitle" required /></div>
+        <div class="form-group"><label>Category *</label>
+          <select [(ngModel)]="editProduct.categoryId" name="eCat" required>
+            <option *ngFor="let c of categories" [value]="c._id">{{c.name}}</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Price *</label><input type="number" [(ngModel)]="editProduct.price" name="ePrice" min="0" required /></div>
+        <div class="form-group"><label>Tax %</label><input type="number" [(ngModel)]="editProduct.taxPercentage" name="eTax" min="0" /></div>
+        <div class="form-group"><label>Stock</label><input type="number" [(ngModel)]="editProduct.stock" name="eStock" min="0" /></div>
+        <div class="form-group"><label>SKU</label><input type="text" [(ngModel)]="editProduct.SKU" name="eSku" /></div>
+        <div class="form-group"><label>Status</label>
+          <select [(ngModel)]="editProduct.isActive" name="eActive">
+            <option [ngValue]="true">Active</option><option [ngValue]="false">Inactive</option>
+          </select>
+        </div>
+        <div class="form-group full"><label>Description</label><textarea [(ngModel)]="editProduct.description" name="eDesc" rows="3"></textarea></div>
+        <div class="form-group full"><label>Replace Images</label><input type="file" accept="image/*" multiple (change)="onEditImages($event)" /></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="showEditProduct=false">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="editLoading">{{editLoading ? 'Saving...' : 'Update'}}</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Category Modal -->
+<div class="modal-overlay" *ngIf="showAddCategory" (click)="showAddCategory=false">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-header"><h3>Add Category</h3><button (click)="showAddCategory=false">✕</button></div>
+    <div class="error-msg" *ngIf="catError">⚠️ {{catError}}</div>
+    <div class="success-msg" *ngIf="catSuccess">✅ {{catSuccess}}</div>
+    <form (ngSubmit)="submitCategory()">
+      <div class="modal-grid">
+        <div class="form-group full"><label>Name *</label><input type="text" [(ngModel)]="newCategory.name" name="cName" required /></div>
+        <div class="form-group"><label>Status</label>
+          <select [(ngModel)]="newCategory.status" name="cStatus">
+            <option value="active">Active</option><option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Image</label><input type="file" accept="image/*" (change)="onCatImage($event)" /></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="showAddCategory=false">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="catLoading">{{catLoading ? 'Saving...' : 'Save'}}</button>
+      </div>
+    </form>
+  </div>
+</div>
